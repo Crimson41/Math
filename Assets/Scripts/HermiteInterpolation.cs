@@ -1,13 +1,17 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 
 [RequireComponent(typeof(LineRenderer))]
 public class HermiteInterpolation : MonoBehaviour
 {
-    // Points graphiquement relevés :
-    // (Abscisses, ordonnées, tangentes)
-    [SerializeField] List<Vector3> _points = new()
+    [Header("UI")]
+    [SerializeField] private Transform _pointsList;
+    [SerializeField] private GameObject _pointPrefab;
+
+    [Header("Curves")]
+    [SerializeField] private List<Vector3> _points = new()
     {
         new(2, 3, -10), // A
         new(2, 7, 1), // B
@@ -19,6 +23,8 @@ public class HermiteInterpolation : MonoBehaviour
         new(6, 3, -0.5f), // H
         new(6, 2, -0.3f), // I
     };
+    // Points graphiquement relevés :
+    // (Abscisses, ordonnées, tangentes)
 
     private List<float> X_final; // Abscisses finaux
     private List<float> Y_final; // Ordonnées finaux
@@ -27,17 +33,44 @@ public class HermiteInterpolation : MonoBehaviour
 
     private void Awake()
     {
+        Point.OnValueChanged += Point_OnValueChanged;
+
         _lineRenderer = GetComponent<LineRenderer>();
+
+        char index = 'A';
+        int id = 0;
+
+        foreach (var point in _points)
+        {
+            Instantiate(_pointPrefab, _pointsList).GetComponent<Point>().Init(index.ToString(), id, point.x, point.y, point.z);
+
+            index++;
+            id++;
+        }
+
         _points.Add(new());
         Draw();
+    }
+
+    private void Point_OnValueChanged(int id, Vector3 point)
+    {
+        _points[id] = point;
+        if (id == 0) EditLastPoint();
+
+        Draw();
+    }
+
+    private void EditLastPoint()
+    {
+        Vector3 lastPoint = _points.ElementAt(0);
+        lastPoint.z = 0;
+        _points[9] = lastPoint;
     }
 
     public void Draw()
     {
         Debug.Log("Drawing new curves");
-        Vector3 lastPoint = _points.ElementAt(0);
-        lastPoint.z = 0;
-        _points[9] = lastPoint;
+        EditLastPoint();
 
         X_final = new(); // Abscisses finaux
         Y_final = new(); // Ordonnées finaux
