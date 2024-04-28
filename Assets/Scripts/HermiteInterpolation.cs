@@ -1,7 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
-using TMPro;
 
 [RequireComponent(typeof(LineRenderer))]
 public class HermiteInterpolation : MonoBehaviour
@@ -28,7 +27,7 @@ public class HermiteInterpolation : MonoBehaviour
 
     private List<float> X_final; // Abscisses finaux
     private List<float> Y_final; // Ordonnées finaux
-    private int _precisionPoints = 10;
+    private int _precisionPoints = 100;
     private LineRenderer _lineRenderer;
 
     private void Awake()
@@ -50,6 +49,11 @@ public class HermiteInterpolation : MonoBehaviour
 
         _points.Add(new());
         Draw();
+    }
+
+    private void OnDestroy()
+    {
+        Point.OnValueChanged -= Point_OnValueChanged;
     }
 
     private void Point_OnValueChanged(int id, Vector3 point)
@@ -88,6 +92,19 @@ public class HermiteInterpolation : MonoBehaviour
 
     private void Hermite(float x0, float y0, float m0, float x1, float y1, float m1, int numPoints)
     {
+        bool isReversed = false;
+        if (x1 < x0) // Vérifie si l'intervalle doit être inversé
+        {
+            // Échange des points pour inverser l'intervalle
+            (x0, x1) = (x1, x0);
+            (y0, y1) = (y1, y0);
+            (m0, m1) = (m1, m0);
+            isReversed = true;
+        }
+
+        List<float> tempX = new();
+        List<float> tempY = new();
+
         for (int i = 0; i < numPoints; i++)
         {
             float t = (float)i / (numPoints - 1);
@@ -97,9 +114,19 @@ public class HermiteInterpolation : MonoBehaviour
             float h11 = Mathf.Pow(t, 2) * (t - 1);
             float X = h00 * x0 + h10 * (x0 + m0) + h01 * x1 + h11 * (x1 + m1);
             float Y = h00 * y0 + h10 * (y0 + m0) + h01 * y1 + h11 * (y1 + m1);
-            X_final.Add(X);
-            Y_final.Add(Y);
+            tempX.Add(X);
+            tempY.Add(Y);
         }
+
+        if (isReversed)
+        {
+            // Inverser les listes si l'intervalle a été inversé initialement
+            tempX.Reverse();
+            tempY.Reverse();
+        }
+
+        X_final.AddRange(tempX);
+        Y_final.AddRange(tempY);
     }
     public void DrawCurve()
     {
